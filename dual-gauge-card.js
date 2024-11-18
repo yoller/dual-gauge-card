@@ -1,3 +1,11 @@
+// Registrazione della card per Lovelace
+window.customCards = window.customCards || [];
+window.customCards.push({
+  type: 'dual-gauge-card',
+  name: 'Dual Gauge Card',
+  description: 'Una custom card che visualizza due gauge.'
+});
+
 class DualGaugeCard extends HTMLElement {
   set hass(hass) {
     this._hass = hass;
@@ -39,18 +47,13 @@ class DualGaugeCard extends HTMLElement {
       this.config.outer.colors = this.config.colors;
     }
 
-    if (this.config.inner.colors) {
-      this.config.inner.colors.sort((a, b) => a.value < b.value ? 1 : -1);
-    }
-    if (this.config.outer.colors) {
-      this.config.outer.colors.sort((a, b) => a.value < b.value ? 1 : -1);
-    }
+    // Non ordiniamo i colori qui, lo faremo dopo aver processato i template
   }
 
   _update() {
     if (
-      this._hass.states[this.config['inner'].entity] == undefined ||
-      this._hass.states[this.config['outer'].entity] == undefined
+      this._hass.states[this.config['inner'].entity] === undefined ||
+      this._hass.states[this.config['outer'].entity] === undefined
     ) {
       console.warn('Entity non definita');
       if (this.card) {
@@ -76,7 +79,7 @@ class DualGaugeCard extends HTMLElement {
       return;
     } else if (
       this.card &&
-      this.card.firstElementChild.tagName.toLowerCase() == 'p'
+      this.card.firstElementChild.tagName.toLowerCase() === 'p'
     ) {
       this._createCard();
     }
@@ -197,8 +200,8 @@ class DualGaugeCard extends HTMLElement {
   _findColor(value, gaugeConfig) {
     if (!gaugeConfig.colors) return;
 
-    var i = 0,
-      count = gaugeConfig.colors.length - 1;
+    let i = 0;
+    const count = gaugeConfig.colors.length - 1;
     for (; i < count; i++) {
       if (value >= gaugeConfig.colors[i].value) return gaugeConfig.colors[i].color;
     }
@@ -324,12 +327,12 @@ class DualGaugeCard extends HTMLElement {
 
         width: var(--gauge-card-width);
         padding: 16px;
-        box-sizing:border-box;
+        box-sizing: border-box;
         margin: 6px auto;
       }
 
       .gauge-dual-card div {
-        box-sizing:border-box;
+        box-sizing: border-box;
       }
       .gauge-dual {
         overflow: hidden;
@@ -341,7 +344,7 @@ class DualGaugeCard extends HTMLElement {
       .gauge-frame {
         width: 100%;
         height: 0;
-        padding-bottom:100%;
+        padding-bottom: 100%;
         position: relative;
       }
 
@@ -395,14 +398,14 @@ class DualGaugeCard extends HTMLElement {
       }
 
       .gauge-value {
-        margin-bottom:15%;
+        margin-bottom: 15%;
         font-size: var(--value-font-size);
         font-weight: bold;
       }
 
       .gauge-label {
         font-size: var(--label-font-size);
-        margin-bottom:10%;
+        margin-bottom: 10%;
       }
 
       .gauge-value-outer, .gauge-label-outer {
@@ -430,7 +433,7 @@ class DualGaugeCard extends HTMLElement {
         border-color: var(--inner-color);
       }
 
-      .shadeInner .gauge-value-inner, .shadeInner .gauge-label-inner, .shadeInner .inner-gauge .circle   {
+      .shadeInner .gauge-value-inner, .shadeInner .gauge-label-inner, .shadeInner .inner-gauge .circle {
         filter: brightness(75%);
       }
     `;
