@@ -353,4 +353,103 @@ class DualGaugeCard extends HTMLElement {
         height: 200%;
         border-radius: 100%;
         border: var(--gauge-width) solid;
-       
+        transition: border-color .5s linear;
+      }
+
+      .circle-container {
+        position: absolute;
+        transform-origin: 50% 100%;
+        top: 0;
+        left: 0;
+        height: 50%;
+        width: 100%;
+        overflow: hidden;
+        transition: transform .5s linear;
+      }
+
+      .small-circle .circle {
+        top: 20%;
+        left: 10%;
+        width: 80%;
+        height: 160%;
+      }
+
+      .gauge-background .circle {
+        border: calc(var(--gauge-width) * 2 - 2px) solid var(--gauge-background-color);
+      }
+
+      .gauge-title {
+        position: absolute;
+        bottom: 51%;
+        margin-bottom: 0.1em;
+        text-align: center;
+        width: 100%;
+        font-size: var(--title-font-size);
+      }
+
+      .gauge-value, .gauge-label {
+        position: absolute;
+        bottom: 50%;
+        width: 81%;
+        text-align: center;
+      }
+
+      .gauge-value {
+        margin-bottom:15%;
+        font-size: var(--value-font-size);
+        font-weight: bold;
+      }
+
+      .gauge-label {
+        font-size: var(--label-font-size);
+        margin-bottom:10%;
+      }
+
+      .gauge-value-outer, .gauge-label-outer {
+        color: var(--outer-color);
+      }
+
+      .gauge-value-inner, .gauge-label-inner {
+        right: 0;
+        color: var(--inner-color);
+      }
+
+      .outer-gauge {
+        transform: rotate(var(--outer-angle));
+      }
+
+      .outer-gauge .circle {
+        border-color: var(--outer-color);
+      }
+
+      .inner-gauge {
+        transform: rotate(var(--inner-angle));
+      }
+
+      .inner-gauge .circle {
+        border-color: var(--inner-color);
+      }
+
+      .shadeInner .gauge-value-inner, .shadeInner .gauge-label-inner, .shadeInner .inner-gauge .circle   {
+        filter: brightness(75%);
+      }
+    `;
+  }
+
+  // Modifica della funzione _parseTemplate per includere 'hass'
+  _parseTemplate(str) {
+    if (typeof str !== 'string') return str;
+    const templateRegex = /\[\[\[(.*?)\]\]\]/g;
+    return str.replace(templateRegex, (match, code) => {
+      try {
+        const func = new Function('hass', 'return ' + code);
+        return func(this._hass);
+      } catch (e) {
+        console.error('Errore nella valutazione del template:', e);
+        return '';
+      }
+    });
+  }
+}
+
+customElements.define('dual-gauge-card', DualGaugeCard);
