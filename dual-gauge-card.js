@@ -10,20 +10,23 @@ class DualGaugeCard extends HTMLElement {
   }
 
   setConfig(config) {
-    if (!config.inner|| !config.inner.entity) {
-      throw new Error('You need to define an entity for the inner gauge');
+    if (!config.inner || !config.inner.entity) {
+      throw new Error('Devi definire un entity per il gauge interno');
     }
     if (!config.outer || !config.outer.entity) {
-      throw new Error('You need to define an entity for the outer gauge');
+      throw new Error('Devi definire un entity per il gauge esterno');
     }
     this.config = JSON.parse(JSON.stringify(config));
 
+    // Rimuovi i valori di default di min e max per consentire i template
+    /*
     if (!this.config.min) {
       this.config.min = 0;
     }
     if (!this.config.max) {
       this.config.max = 100;
     }
+    */
 
     if (this.config.precision === undefined) {
       this.config.precision = 2;
@@ -35,6 +38,8 @@ class DualGaugeCard extends HTMLElement {
       this.config.outer.precision = this.config.precision;
     }
 
+    // Rimuovi i valori di default di min e max per inner e outer per consentire i template
+    /*
     if (!this.config.inner.min) {
       this.config.inner.min = this.config.min;
     }
@@ -48,9 +53,10 @@ class DualGaugeCard extends HTMLElement {
     if (!this.config.outer.max) {
       this.config.outer.max = this.config.max;
     }
+    */
 
     if (!this.config.hasOwnProperty('shadeInner')) {
-      this.config.shadeInner = true
+      this.config.shadeInner = true;
     }
 
     if (!this.config.inner.colors) {
@@ -69,9 +75,11 @@ class DualGaugeCard extends HTMLElement {
   }
 
   _update() {
-    if (this._hass.states[this.config['inner'].entity] == undefined ||
-       this._hass.states[this.config['outer'].entity] == undefined) {
-      console.warn("Undefined entity");
+    if (
+      this._hass.states[this.config['inner'].entity] == undefined ||
+      this._hass.states[this.config['outer'].entity] == undefined
+    ) {
+      console.warn('Entity non definita');
       if (this.card) {
         this.card.remove();
       }
@@ -82,16 +90,21 @@ class DualGaugeCard extends HTMLElement {
       }
 
       const content = document.createElement('p');
-      content.style.background = "#e8e87a";
-      content.style.padding = "8px";
-      content.innerHTML = "Error finding these entities:<br>- " +
+      content.style.background = '#e8e87a';
+      content.style.padding = '8px';
+      content.innerHTML =
+        'Errore nel trovare queste entità:<br>- ' +
         this.config['inner'].entity +
-        "<br>- " + this.config['outer'].entity;
+        '<br>- ' +
+        this.config['outer'].entity;
       this.card.appendChild(content);
-      
+
       this.appendChild(this.card);
       return;
-    } else if (this.card && this.card.firstElementChild.tagName.toLowerCase() == "p") {
+    } else if (
+      this.card &&
+      this.card.firstElementChild.tagName.toLowerCase() == 'p'
+    ) {
       this._createCard();
     }
     this._updateGauge('inner');
@@ -100,14 +113,56 @@ class DualGaugeCard extends HTMLElement {
 
   _updateGauge(gauge) {
     const gaugeConfig = this.config[gauge];
-    const value = this._getEntityStateValue(this._hass.states[gaugeConfig.entity], gaugeConfig.attribute);
-    this._setCssVariable(this.nodes.content, gauge + '-angle', this._calculateRotation(value, gaugeConfig));
-    this.nodes[gauge].value.innerHTML = this._formatValue(value, gaugeConfig);
-    if (gaugeConfig.label) {
-      this.nodes[gauge].label.innerHTML = gaugeConfig.label;
+
+    // Processa i template in max e min
+    const processedGaugeConfig = Object.assign({}, gaugeConfig);
+    processedGaugeConfig.max = Number(
+      this._parseTemplate(
+        gaugeConfig.max !== undefined
+          ? gaugeConfig.max
+          : this.config.max !== undefined
+          ? this.config.max
+          : 100
+      )
+    );
+    processedGaugeConfig.min = Number(
+      this._parseTemplate(
+        gaugeConfig.min !== undefined
+          ? gaugeConfig.min
+          : this.config.min !== undefined
+          ? this.config.min
+          : 0
+      )
+    );
+
+    // Processa i template nell'array colors
+    if (gaugeConfig.colors) {
+      processedGaugeConfig.colors = gaugeConfig.colors.map((colorEntry) => ({
+        color: colorEntry.color,
+        value: Number(this._parseTemplate(colorEntry.value)),
+      }));
+      // Ordina i colori dopo aver processato i template
+      processedGaugeConfig.colors.sort((a, b) => (a.value < b.value ? 1 : -1));
     }
 
-    const color = this._findColor(value, gaugeConfig);
+    const value = this._getEntityStateValue(
+      this._hass.states[gaugeConfig.entity],
+      gaugeConfig.attribute
+    );
+    this._setCssVariable(
+      this.nodes.content,
+      gauge + '-angle',
+      this._calculateRotation(value, processedGaugeConfig)
+    );
+    this.nodes[gauge].value.innerHTML = this._formatValue(
+      value,
+      processedGaugeConfig
+    );
+    if (processedGaugeConfig.label) {
+      this.nodes[gauge].label.innerHTML = processedGaugeConfig.label;
+    }
+
+    const color = this._findColor(value, processedGaugeConfig);
     if (color) {
       this._setCssVariable(this.nodes.content, gauge + '-color', color);
     }
@@ -117,17 +172,16 @@ class DualGaugeCard extends HTMLElement {
     const event = new Event('hass-more-info', {
       bubbles: true,
       cancelable: false,
-      composed: true
+      composed: true,
     });
     event.detail = {
-      entityId: this.config[gauge].entity
+      entityId: this.config[gauge].entity,
     };
     this.card.dispatchEvent(event);
     return event;
   }
 
   _formatValue(value, gaugeConfig) {
-
     value = parseFloat(value);
 
     if (gaugeConfig.precision !== undefined) {
@@ -143,19 +197,28 @@ class DualGaugeCard extends HTMLElement {
 
   _getEntityStateValue(entity, attribute) {
     if (!attribute) {
-      if(isNaN(entity.state)) return "-" ; //check if entity state is NaN
+      if (isNaN(entity.state)) return '-'; // Controlla se lo stato dell'entità è NaN
       else return entity.state;
     }
 
-    // return entity.attributes[attribute];
-    if(isNaN(entity.attributes[attribute])) return "-" ; //check if entity attribute is NaN
+    if (isNaN(entity.attributes[attribute])) return '-'; // Controlla se l'attributo dell'entità è NaN
     else return entity.attributes[attribute];
   }
 
   _calculateRotation(value, gaugeConfig) {
-    if(isNaN(value)) return '180deg'; //check if value is NaN
-    const maxTurnValue = Math.min(Math.max(value, gaugeConfig.min), gaugeConfig.max);
-    return (180 + (5 * (maxTurnValue - gaugeConfig.min)) / (gaugeConfig.max - gaugeConfig.min) / 10 * 360) + 'deg';
+    if (isNaN(value)) return '180deg'; // Controlla se il valore è NaN
+    const maxTurnValue = Math.min(
+      Math.max(value, gaugeConfig.min),
+      gaugeConfig.max
+    );
+    return (
+      180 +
+      ((5 * (maxTurnValue - gaugeConfig.min)) /
+        (gaugeConfig.max - gaugeConfig.min) /
+        10) *
+        360 +
+      'deg'
+    );
   }
 
   _findColor(value, gaugeConfig) {
@@ -204,7 +267,6 @@ class DualGaugeCard extends HTMLElement {
             <div class="circle"></div>
           </div>
 
-
           <div class="gauge-value gauge-value-outer"></div>
           <div class="gauge-label gauge-label-outer"></div>
 
@@ -212,7 +274,6 @@ class DualGaugeCard extends HTMLElement {
           <div class="gauge-label gauge-label-inner"></div>
 
           <div class="gauge-title"></div>
-
         </div>
       </div>
     `;
@@ -227,20 +288,20 @@ class DualGaugeCard extends HTMLElement {
       inner: {
         value: content.querySelector('.gauge-value-inner'),
         label: content.querySelector('.gauge-label-inner'),
-      }
+      },
     };
 
     if (this.config.title) {
       this.nodes.title.innerHTML = this.config.title;
-      this.nodes.title.addEventListener('click', event => {
+      this.nodes.title.addEventListener('click', (event) => {
         this._showDetails('outer');
       });
     }
 
-    this.nodes.outer.value.addEventListener('click', event => {
+    this.nodes.outer.value.addEventListener('click', (event) => {
       this._showDetails('outer');
     });
-    this.nodes.inner.value.addEventListener('click', event => {
+    this.nodes.inner.value.addEventListener('click', (event) => {
       this._showDetails('inner');
     });
 
@@ -249,11 +310,19 @@ class DualGaugeCard extends HTMLElement {
     }
 
     if (this.config.cardwidth) {
-      this._setCssVariable(this.nodes.content, 'gauge-card-width', this.config.cardwidth + 'px');
+      this._setCssVariable(
+        this.nodes.content,
+        'gauge-card-width',
+        this.config.cardwidth + 'px'
+      );
     }
 
     if (this.config.background_color) {
-      this._setCssVariable(this.nodes.content, 'gauge-background-color', this.config.background_color);
+      this._setCssVariable(
+        this.nodes.content,
+        'gauge-background-color',
+        this.config.background_color
+      );
     }
 
     this._initStyles();
@@ -287,7 +356,7 @@ class DualGaugeCard extends HTMLElement {
       }
 
       .gauge-dual-card div {
-        box-sizing:border-box
+        box-sizing:border-box;
       }
       .gauge-dual {
         overflow: hidden;
@@ -367,12 +436,10 @@ class DualGaugeCard extends HTMLElement {
         color: var(--outer-color);
       }
 
-
       .gauge-value-inner, .gauge-label-inner {
         right: 0;
         color: var(--inner-color);
       }
-
 
       .outer-gauge {
         transform: rotate(var(--outer-angle));
@@ -381,7 +448,6 @@ class DualGaugeCard extends HTMLElement {
       .outer-gauge .circle {
         border-color: var(--outer-color);
       }
-
 
       .inner-gauge {
         transform: rotate(var(--inner-angle));
@@ -394,8 +460,21 @@ class DualGaugeCard extends HTMLElement {
       .shadeInner .gauge-value-inner, .shadeInner .gauge-label-inner, .shadeInner .inner-gauge .circle   {
         filter: brightness(75%);
       }
-
     `;
+  }
+
+  // Aggiungi la funzione _parseTemplate
+  _parseTemplate(str) {
+    if (typeof str !== 'string') return str;
+    const templateRegex = /\[\[\[(.*?)\]\]\]/g;
+    return str.replace(templateRegex, (match, code) => {
+      try {
+        return eval(code);
+      } catch (e) {
+        console.error('Errore nella valutazione del template:', e);
+        return '';
+      }
+    });
   }
 }
 
