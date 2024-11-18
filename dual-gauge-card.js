@@ -18,16 +18,6 @@ class DualGaugeCard extends HTMLElement {
     }
     this.config = JSON.parse(JSON.stringify(config));
 
-    // Rimuovi i valori di default di min e max per consentire i template
-    /*
-    if (!this.config.min) {
-      this.config.min = 0;
-    }
-    if (!this.config.max) {
-      this.config.max = 100;
-    }
-    */
-
     if (this.config.precision === undefined) {
       this.config.precision = 2;
     }
@@ -37,23 +27,6 @@ class DualGaugeCard extends HTMLElement {
     if (this.config.outer.precision === undefined) {
       this.config.outer.precision = this.config.precision;
     }
-
-    // Rimuovi i valori di default di min e max per inner e outer per consentire i template
-    /*
-    if (!this.config.inner.min) {
-      this.config.inner.min = this.config.min;
-    }
-    if (!this.config.inner.max) {
-      this.config.inner.max = this.config.max;
-    }
-
-    if (!this.config.outer.min) {
-      this.config.outer.min = this.config.min;
-    }
-    if (!this.config.outer.max) {
-      this.config.outer.max = this.config.max;
-    }
-    */
 
     if (!this.config.hasOwnProperty('shadeInner')) {
       this.config.shadeInner = true;
@@ -197,16 +170,16 @@ class DualGaugeCard extends HTMLElement {
 
   _getEntityStateValue(entity, attribute) {
     if (!attribute) {
-      if (isNaN(entity.state)) return '-'; // Controlla se lo stato dell'entità è NaN
+      if (isNaN(entity.state)) return '-';
       else return entity.state;
     }
 
-    if (isNaN(entity.attributes[attribute])) return '-'; // Controlla se l'attributo dell'entità è NaN
+    if (isNaN(entity.attributes[attribute])) return '-';
     else return entity.attributes[attribute];
   }
 
   _calculateRotation(value, gaugeConfig) {
-    if (isNaN(value)) return '180deg'; // Controlla se il valore è NaN
+    if (isNaN(value)) return '180deg';
     const maxTurnValue = Math.min(
       Math.max(value, gaugeConfig.min),
       gaugeConfig.max
@@ -380,102 +353,4 @@ class DualGaugeCard extends HTMLElement {
         height: 200%;
         border-radius: 100%;
         border: var(--gauge-width) solid;
-        transition: border-color .5s linear;
-      }
-
-      .circle-container {
-        position: absolute;
-        transform-origin: 50% 100%;
-        top: 0;
-        left: 0;
-        height: 50%;
-        width: 100%;
-        overflow: hidden;
-        transition: transform .5s linear;
-      }
-
-      .small-circle .circle {
-        top: 20%;
-        left: 10%;
-        width: 80%;
-        height: 160%;
-      }
-
-      .gauge-background .circle {
-        border: calc(var(--gauge-width) * 2 - 2px) solid var(--gauge-background-color);
-      }
-
-      .gauge-title {
-        position: absolute;
-        bottom: 51%;
-        margin-bottom: 0.1em;
-        text-align: center;
-        width: 100%;
-        font-size: var(--title-font-size);
-      }
-
-      .gauge-value, .gauge-label {
-        position: absolute;
-        bottom: 50%;
-        width: 81%;
-        text-align: center;
-      }
-
-      .gauge-value {
-        margin-bottom:15%;
-        font-size: var(--value-font-size);
-        font-weight: bold;
-      }
-
-      .gauge-label {
-        font-size: var(--label-font-size);
-        margin-bottom:10%;
-      }
-
-      .gauge-value-outer, .gauge-label-outer {
-        color: var(--outer-color);
-      }
-
-      .gauge-value-inner, .gauge-label-inner {
-        right: 0;
-        color: var(--inner-color);
-      }
-
-      .outer-gauge {
-        transform: rotate(var(--outer-angle));
-      }
-
-      .outer-gauge .circle {
-        border-color: var(--outer-color);
-      }
-
-      .inner-gauge {
-        transform: rotate(var(--inner-angle));
-      }
-
-      .inner-gauge .circle {
-        border-color: var(--inner-color);
-      }
-
-      .shadeInner .gauge-value-inner, .shadeInner .gauge-label-inner, .shadeInner .inner-gauge .circle   {
-        filter: brightness(75%);
-      }
-    `;
-  }
-
-  // Aggiungi la funzione _parseTemplate
-  _parseTemplate(str) {
-    if (typeof str !== 'string') return str;
-    const templateRegex = /\[\[\[(.*?)\]\]\]/g;
-    return str.replace(templateRegex, (match, code) => {
-      try {
-        return eval(code);
-      } catch (e) {
-        console.error('Errore nella valutazione del template:', e);
-        return '';
-      }
-    });
-  }
-}
-
-customElements.define('dual-gauge-card', DualGaugeCard);
+       
